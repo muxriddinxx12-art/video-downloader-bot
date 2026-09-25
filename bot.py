@@ -2,6 +2,8 @@ import asyncio
 import logging
 import os
 import re
+import threading
+from http.server import HTTPServer, BaseHTTPRequestHandler
 
 import yt_dlp
 from aiogram import Bot, Dispatcher, F
@@ -18,6 +20,23 @@ bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
 
 URL_REGEX = re.compile(r"https?://\S+")
+
+
+# ====== Render uchun soxta HTTP server (port ochib turish uchun) ======
+class HealthCheckHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write(b"Bot ishlayapti")
+
+    def log_message(self, format, *args):
+        pass
+
+
+def run_health_server():
+    port = int(os.getenv("PORT", 8080))
+    server = HTTPServer(("0.0.0.0", port), HealthCheckHandler)
+    server.serve_forever()
 
 
 @dp.message(CommandStart())
@@ -79,4 +98,5 @@ async def main():
 
 
 if __name__ == "__main__":
+    threading.Thread(target=run_health_server, daemon=True).start()
     asyncio.run(main())
